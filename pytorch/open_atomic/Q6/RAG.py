@@ -1,4 +1,5 @@
 import os
+import re
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com" 
 knowledge_base_path = r"D:\Learning\machine-learning\pytorch\knowledge_base\knowledge_base"
 
@@ -13,22 +14,34 @@ for file_name in files:
 
 chunk_size = 500
 overlap = 50
+import re
 
+def split_markdown_by_headers(text, max_chunk_size=600):
+
+    # 按 #、##、### 标题切分
+    sections = re.split(r'\n(?=#{1,3} )', text)
+
+    chunks = []
+    for section in sections:
+        section = section.strip()
+        if not section:
+            continue
+        if len(section) > max_chunk_size:
+            start = 0
+            while start < len(section):
+                end = min(start + max_chunk_size, len(section))
+                chunks.append(section[start:end])
+                start = end
+        else:
+            chunks.append(section)
+
+    return chunks
 all_chunks = []
 
 for file_name, content in all_content.items():
-    start = 0
-    while start < len(content):
-        end = min(start + chunk_size, len(content))
-        chunk = content[start:end]
-        all_chunks.append({
-            "source": file_name,
-            "text": chunk
-        })
-        next_start = end - overlap
-        if next_start <= start:
-            break
-        start = next_start
+    chunks = split_markdown_by_headers(content, max_chunk_size=800)
+    for chunk in chunks:
+     all_chunks.append({"source": file_name, "text": chunk})
 
 print(f"共切分出 {len(all_chunks)} 个文本块\n")
 
