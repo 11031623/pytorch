@@ -1,4 +1,5 @@
 import os
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com" 
 knowledge_base_path = r"D:\Learning\machine-learning\pytorch\knowledge_base\knowledge_base"
 
 files = ["01_overview.md", "02_tasks.md", "03_submission.md", "04_faq.md"]
@@ -40,3 +41,23 @@ for i, chunk in enumerate(all_chunks[:10]):
         print(f"   文本块：{chunk['text'][:150]}...")
     else:
         print(f"   文本块：{chunk['text']}")
+print("\n")
+print("第三阶段")
+from sentence_transformers import SentenceTransformer
+import numpy as np
+model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+#文本转成向量
+chunk_texts = [chunk["text"] for chunk in all_chunks]
+chunk_embeddings = model.encode(chunk_texts)
+
+query = "招新题发布日期是什么？"
+query_embedding = model.encode([query])
+
+#  计算相似度
+similarities = np.dot(chunk_embeddings, query_embedding.T).flatten() #点积越大，相似度越高
+top_k_indices = np.argsort(similarities)[-3:][::-1]
+print(f"问题：{query}\n")
+print("最相关的资料块：")
+for idx in top_k_indices:
+    print(f"来源：{all_chunks[idx]['source']}")
+    print(f"内容：{all_chunks[idx]['text'][:150]}...")
