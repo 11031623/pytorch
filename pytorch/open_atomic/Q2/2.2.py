@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import make_friedman1
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_squared_error
 
 X, y = make_friedman1(
     n_samples=1500,
@@ -21,23 +22,28 @@ scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
-# 转为 PyTorch 张量
 X_train = torch.tensor(X_train, dtype=torch.float32)
 X_test = torch.tensor(X_test, dtype=torch.float32)
 y_train = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)
 y_test = torch.tensor(y_test, dtype=torch.float32).view(-1, 1)
 
-class LinearModel(nn.Module):
+class MLP(nn.Module):
     def __init__(self, input_dim):
         super().__init__()
-        self.linear = nn.Linear(input_dim, 1)  # 输入 10 维 → 输出 1 维
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
 
     def forward(self, x):
-        return self.linear(x)
+        return self.net(x)
 
-model = LinearModel(input_dim=10)
+model = MLP(input_dim=10)
 
-criterion = nn.MSELoss()  # 回归任务用 MSE
+criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
 
@@ -49,9 +55,7 @@ for epoch in range(num_epochs):
     optimizer.zero_grad()
 
     y_pred = model(X_train)
-
     loss = criterion(y_pred, y_train)
-
     loss.backward()
     optimizer.step()
 
@@ -66,36 +70,36 @@ with torch.no_grad():
     test_loss = criterion(y_pred_test, y_test)
     print(f"\n最终测试 MSE: {test_loss.item():.4f}")
 
-from sklearn.metrics import r2_score
+mse = mean_squared_error(y_test.numpy(), y_pred_test.numpy())
 r2 = r2_score(y_test.numpy(), y_pred_test.numpy())
-print(f"测试 R² 分数: {r2:.4f}")
 
-# 图 1：训练损失曲线
+print(f"MSE:  {mse:.4f}")
+print(f"R²:   {r2:.4f}")
+
 plt.figure(figsize=(12, 5))
 
 plt.subplot(1, 2, 1)
 plt.plot(train_losses)
 plt.xlabel("Epoch")
 plt.ylabel("MSE Loss")
-plt.title("Training Loss Curve")
+plt.title("MLP Training Loss Curve")
 plt.grid(True)
 
-# 图 2：预测值 vs 真实值散点图
 plt.subplot(1, 2, 2)
 plt.scatter(y_test.numpy(), y_pred_test.numpy(), alpha=0.5)
 plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
 plt.xlabel("True Values")
 plt.ylabel("Predicted Values")
-plt.title(f"Prediction vs True (R² = {r2:.4f})")
+plt.title(f"MLP Prediction vs True (R² = {r2:.4f})")
 plt.grid(True)
 
 plt.tight_layout()
-plt.savefig("linear_model_result.png", dpi=150)
+plt.savefig("mlp_result.png", dpi=150)
 plt.show()
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 print(f"模型参数量: {count_parameters(model)}")
-print("\n模型结构：")
+print("\nMLP 模型结构：")
 print(model)
