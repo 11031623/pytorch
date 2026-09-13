@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 X, y = make_friedman1(
     n_samples=1500,
     n_features=10,
-    noise=1.0,
+    noise=5.0,
     random_state=42
 )
 
